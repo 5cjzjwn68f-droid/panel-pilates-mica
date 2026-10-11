@@ -92,7 +92,8 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 @media (min-width:560px){.r-item{grid-template-columns:auto 1fr 300px}.seg{grid-column:auto}}
 
 .avatar{width:38px;height:38px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:.85rem;flex:none}
-.cc{font-size:.68rem;font-weight:700;letter-spacing:.06em;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted);vertical-align:1px}
+.flag{width:20px;height:14px;border-radius:2px;vertical-align:-2px;box-shadow:0 0 0 1px var(--line);flex:none;display:inline-block}
+.method .flag{margin-right:6px}
 
 .btn{border:0;border-radius:var(--r-sm);padding:12px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);min-height:46px}
 .btn:hover{background:var(--accent-hover)}
@@ -299,6 +300,10 @@ function shortDate(s){ if (!s) return ""; return parse(s).toLocaleDateString("es
 function longDate(s){ return parse(s).toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"}); }
 function esc(t){ return String(t).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
 function initials(n){ return n.split(" ").map(function(w){return w[0];}).slice(0,2).join(""); }
+function flag(cc){
+  if (cc === "AR") return '<svg class="flag" viewBox="0 0 30 20" role="img" aria-label="Argentina"><title>Argentina</title><rect width="30" height="20" fill="#74ACDF"/><rect y="6.67" width="30" height="6.67" fill="#FFFFFF"/><circle cx="15" cy="10" r="2.3" fill="#F6B40E"/></svg>';
+  return '<svg class="flag" viewBox="0 0 30 20" role="img" aria-label="España"><title>España</title><rect width="30" height="20" fill="#AA151B"/><rect y="5" width="30" height="10" fill="#F1BF00"/></svg>';
+}
 function first(n){ return n.split(" ")[0]; }
 function plural(n, a, b){ return n + " " + (n === 1 ? a : b); }
 
@@ -433,7 +438,7 @@ function viewHoy(){
       + '<div class="roster">' + roster.map(function(s){
         var m = att.marks[s.id];
         return '<div class="r-item"><div class="avatar">' + esc(initials(s.name)) + '</div>'
-          + '<div class="r-name"><b>' + esc(s.name) + ' <span class="cc">' + s.cc + '</span></b><span>Le quedan ' + s.credits + ' de ' + PACK.classes + '</span></div>'
+          + '<div class="r-name"><b>' + esc(s.name) + ' ' + flag(s.cc) + '</b><span>Le quedan ' + s.credits + ' de ' + PACK.classes + '</span></div>'
           + '<div class="seg" role="group" aria-label="Asistencia de ' + esc(s.name) + '">'
           + ["asistio","falto","cancelo"].map(function(v){
               var lab = { asistio:"Presente", falto:"Faltó", cancelo:"Avisó" }[v];
@@ -456,7 +461,7 @@ function viewAlertas(){
   html += '<div class="stack">' + list.map(function(x){
     var s = x.s, a = x.a, needsPay = a.kind !== "absent";
     return '<article class="alert ' + a.tone + '"><div class="stripe"></div><div class="alert-body">'
-      + '<div class="alert-head"><div class="avatar">' + esc(initials(s.name)) + '</div><div class="t"><b>' + esc(s.name) + ' <span class="cc">' + s.cc + '</span></b><span>' + esc(a.text) + '</span></div></div>'
+      + '<div class="alert-head"><div class="avatar">' + esc(initials(s.name)) + '</div><div class="t"><b>' + esc(s.name) + ' ' + flag(s.cc) + '</b><span>' + esc(a.text) + '</span></div></div>'
       + '<div class="row"><a class="wa" href="' + waLink(s, a.kind) + '" target="_blank" rel="noopener">Escribir por WhatsApp</a>'
       + (needsPay ? '<button class="btn secondary sm" data-act="pay-for" data-id="' + s.id + '">Registrar pago</button>' : "")
       + '<button class="link-btn" data-act="open" data-id="' + s.id + '">Ver ficha</button></div></div></article>';
@@ -479,7 +484,7 @@ function studentListHTML(){
   return '<div class="s-list">' + list.map(function(s){
     var st = status(s);
     return '<button class="s-item" data-act="open" data-id="' + s.id + '"' + (ui.studentId === s.id ? ' aria-current="true"' : "") + '><div class="avatar">' + esc(initials(s.name)) + '</div>'
-      + '<div class="t"><b>' + esc(s.name) + ' <span class="cc">' + s.cc + '</span></b><span>' + (s.expires ? plural(s.credits,"clase","clases") + " · vence " + shortDate(s.expires) : "Sin pack") + '</span></div>'
+      + '<div class="t"><b>' + esc(s.name) + ' ' + flag(s.cc) + '</b><span>' + (s.expires ? plural(s.credits,"clase","clases") + " · vence " + shortDate(s.expires) : "Sin pack") + '</span></div>'
       + '<span class="pill ' + st.tone + '">' + st.label + '</span></button>';
   }).join("") + '</div>';
 }
@@ -495,7 +500,7 @@ function detailHTML(s){
   if (s.phone) contact.push('<span>WhatsApp: <b>' + esc(s.phone) + '</b></span>');
   if (s.email) contact.push('<span>Email: <b>' + esc(s.email) + '</b></span>');
   return '<div class="panel stack">'
-    + '<div class="detail-head"><div class="avatar">' + esc(initials(s.name)) + '</div><div class="stack" style="gap:2px;min-width:0"><h2 style="font-size:1.25rem">' + esc(s.name) + '</h2><span class="hint">' + (s.cc === "AR" ? "Argentina · paga en pesos" : "España · paga en euros") + '</span></div><span class="spacer"></span><span class="pill ' + st.tone + '">' + st.label + '</span></div>'
+    + '<div class="detail-head"><div class="avatar">' + esc(initials(s.name)) + '</div><div class="stack" style="gap:2px;min-width:0"><h2 style="font-size:1.25rem">' + esc(s.name) + '</h2><span class="hint">' + flag(s.cc) + ' ' + (s.cc === "AR" ? "Argentina · paga en pesos" : "España · paga en euros") + '</span></div><span class="spacer"></span><span class="pill ' + st.tone + '">' + st.label + '</span></div>'
     + '<div class="row">' + (contact.length ? '<div class="contact">' + contact.join("") + '</div>' : '<span class="hint">Sin teléfono ni email cargados.</span>') + '<span class="spacer"></span><button class="ghost" data-act="edit-student" data-id="' + s.id + '">Editar datos</button></div>'
     + (s.notes ? '<div class="note">' + esc(s.notes) + '</div>' : "")
     + '<div class="kpis"><div class="kpi"><small>Clases restantes</small><strong>' + s.credits + '</strong><em> de ' + PACK.classes + '</em><div class="dots">' + dots + '</div></div>'
@@ -512,7 +517,7 @@ function formHTML(s){
     + '<h2 style="font-size:1.2rem">' + (isNew ? "Nueva ficha" : "Editar datos") + '</h2>'
     + '<div class="field"><label for="f-name">Nombre y apellido</label><input id="f-name" type="text" autocomplete="off" value="' + esc(s ? s.name : "") + '" placeholder="Por ejemplo, Laura García"></div>'
     + '<div class="field"><span class="lbl">País</span><div class="methods" role="group" aria-label="País">'
-    + [["ES","España · euros"],["AR","Argentina · pesos"]].map(function(c){ return '<button type="button" class="method" data-act="form-cc" data-cc="' + c[0] + '" aria-pressed="' + (cc === c[0]) + '">' + c[1] + '</button>'; }).join("")
+    + [["ES","España · euros"],["AR","Argentina · pesos"]].map(function(c){ return '<button type="button" class="method" data-act="form-cc" data-cc="' + c[0] + '" aria-pressed="' + (cc === c[0]) + '">' + flag(c[0]) + c[1] + '</button>'; }).join("")
     + '</div></div>'
     + '<div class="field"><label for="f-phone">WhatsApp (opcional)</label><input id="f-phone" type="tel" inputmode="tel" value="' + esc(s && s.phone || "") + '" placeholder="' + (cc === "AR" ? "+54 9 11 1234 5678" : "+34 600 123 456") + '"><span class="hint">Con el prefijo del país. Así WhatsApp se abre directo en su chat.</span></div>'
     + '<div class="field"><label for="f-email">Email (opcional)</label><input id="f-email" type="email" inputmode="email" value="' + esc(s && s.email || "") + '" placeholder="nombre@gmail.com"><span class="hint">El que usa para la invitación de Google Calendar.</span></div>'
@@ -561,7 +566,7 @@ function viewPago(){
   var html = '<div class="view-title"><div><div class="eyebrow">Nuevo cobro</div><h1>Registrar pago</h1></div></div>';
   html += '<form class="panel stack" id="payform" novalidate>'
     + '<div class="field"><label for="p-st">Quién pagó</label><select id="p-st"><option value="">Elige a quién</option>'
-    + db.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"es"); }).map(function(x){ return '<option value="' + x.id + '"' + (s && s.id === x.id ? " selected" : "") + '>' + esc(x.name) + ' (' + x.cc + ')</option>'; }).join("")
+    + db.students.slice().sort(function(a,b){ return a.name.localeCompare(b.name,"es"); }).map(function(x){ return '<option value="' + x.id + '"' + (s && s.id === x.id ? " selected" : "") + '>' + esc(x.name) + ' · ' + (x.cc === "AR" ? "Argentina" : "España") + '</option>'; }).join("")
     + '</select><button type="button" class="link-btn" data-act="new-student" style="align-self:flex-start;margin-top:2px">+ Nueva ficha</button></div>'
     + '<div class="field"><span class="lbl">Medio de pago</span><div class="methods" role="group" aria-label="Medio de pago">' + methods.map(function(m){
         return '<button type="button" class="method" data-act="method" data-m="' + m + '" aria-pressed="' + (ui.method === m) + '">' + m + '</button>'; }).join("") + '</div></div>'
