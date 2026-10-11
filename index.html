@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Pilates">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Panel de Pilates de Mica Suarez</title>
+<title>Panel de Pilates</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
@@ -177,6 +177,24 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 .contact{display:flex;flex-direction:column;gap:4px;font-size:.88rem;color:var(--muted)}
 .contact b{color:var(--ink);font-weight:500}
 .note{background:var(--sunken);border-radius:var(--r-sm);padding:10px 12px;font-size:.88rem}
+.rsvp-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rc{border-radius:var(--r-sm);padding:10px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.rc strong{font-family:var(--f-display);font-size:1.7rem;line-height:1;font-variant-numeric:tabular-nums}
+.rc small{font-size:.74rem;font-weight:600;line-height:1.2}
+.rc.ok{background:var(--ok-soft);color:var(--ok)}
+.rc.bad{background:var(--bad-soft);color:var(--bad)}
+.rc.warn{background:var(--warn-soft);color:var(--warn)}
+.rc.idle{background:var(--idle-soft);color:var(--idle)}
+.rg{display:flex;flex-direction:column;gap:8px}
+.names{display:flex;flex-wrap:wrap;gap:6px}
+.name-chip{display:inline-flex;align-items:center;gap:6px;background:var(--sunken);border-radius:999px;padding:4px 10px 4px 4px;font-size:.88rem;border:1px solid transparent}
+.name-chip .mini{width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:.68rem;font-weight:700}
+.name-chip.just{border-color:var(--accent)}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted)}
+.sync::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.rsvp-tag{font-weight:600}
+.rsvp-tag.yes{color:var(--ok)} .rsvp-tag.no{color:var(--bad)} .rsvp-tag.maybe{color:var(--warn)} .rsvp-tag.none{color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){.name-chip.just{animation:glow 1.6s ease-out}@keyframes glow{from{box-shadow:0 0 0 4px var(--accent-soft)}to{box-shadow:0 0 0 0 transparent}}}
 
 /* money */
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -245,7 +263,7 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 var DAY = 86400000;
 var PACK = { classes: 4, days: 35, EUR: 55, ARS: 82500 };   // precios de ejemplo
 var CLASS_TIME = { h: 19, m: 0 };                           // hora de Madrid
-var MEET = "meet.google.com/abc-defg-hij";                  // enlace de ejemplo
+var MEET = "meet.google.com/tcx-pcaf-ofj";                  // evento de prueba en Calendar
 var CAP = 10;
 
 function startOfDay(d){ var x = new Date(d); x.setHours(0,0,0,0); return x; }
@@ -270,7 +288,8 @@ function seed(){
     { id:5, name:"Andrés Blanco",  cc:"ES", credits:2, expires:addDays(lastTue,28), hist:["falto","falto"] },
     { id:6, name:"Martín Muñoz",   cc:"AR", credits:4, expires:addDays(lastTue,34), hist:[] },
     { id:7, name:"Lucía Fernández",cc:"ES", credits:0, expires:null,               hist:[] },
-    { id:8, name:"Paula Sánchez",  cc:"ES", credits:2, expires:off(-2),            hist:["asistio","asistio"] }
+    { id:8, name:"Paula Sánchez",  cc:"ES", credits:2, expires:off(-2),            hist:["asistio","asistio"] },
+    { id:9, name:"Juan Berrino",   cc:"ES", credits:1, expires:addDays(lastTue,30), hist:["asistio","asistio","asistio"], phone:"+34 654 940 880", email:"juannibm093@gmail.com", notes:"Ficha de prueba para simular asistencia y WhatsApp." }
   ];
   var history = [], payments = [], pid = 1;
   s.forEach(function(st){
@@ -283,13 +302,15 @@ function seed(){
     }
     delete st.hist;
   });
-  return { students:s, history:history, payments:payments, attendance:{} };
+  var rsvp = {}; rsvp[nextTue] = { 1:"yes", 2:"yes", 4:"maybe", 5:"none", 6:"no", 9:"yes" };
+  return { students:s, history:history, payments:payments, attendance:{}, rsvp:rsvp, rsvpUpdated:Date.now() - 4*60000 };
 }
 
-var KEY = "panel-pilates-demo-v2";
+var KEY = "panel-pilates-demo-v7";
 var db;
 try { db = JSON.parse(localStorage.getItem(KEY)); } catch(e){ db = null; }
 if (!db || !db.students) db = seed();
+if (!db.rsvp) db.rsvp = {};
 function persist(){ try { localStorage.setItem(KEY, JSON.stringify(db)); } catch(e){} }
 
 /* ---------- formato ---------- */
@@ -365,11 +386,19 @@ function message(s, kind){
                 : "¡Hola " + n + "! Te echamos de menos las últimas dos clases. ¿Todo bien? El martes te esperamos.",
     nopack:  ar ? "¡Hola " + n + "! Gracias por venir a probar. El pack de 4 clases cuesta " + price + ". ¿Te paso los datos para sumarte?"
                 : "¡Hola " + n + "! Gracias por venir a probar. El pack de 4 clases cuesta " + price + ". ¿Te paso los datos para apuntarte?",
-    hello:   "¡Hola " + n + "!"
+    hello:   "¡Hola " + n + "! Te recuerdo la clase de pilates del " + longDate(nextTue) + " a las " + clock(classInstant(nextTue), ar ? "America/Argentina/Buenos_Aires" : "Europe/Madrid") + " (hora de " + (ar ? "Argentina" : "España") + "). Link de Meet: https://" + MEET
   };
   return t[kind] || t.hello;
 }
-function waLink(s, kind){ var ph = (s.phone || "").replace(/\D/g, ""); return "https://wa.me/" + ph + "?text=" + encodeURIComponent(message(s, kind)); }
+function waPhone(s){
+  var d = (s.phone || "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.indexOf("00") === 0) d = d.slice(2);
+  if (s.cc === "ES" && d.length === 9) d = "34" + d;
+  if (s.cc === "AR" && d.indexOf("54") !== 0) d = "549" + d.replace(/^0/, "");
+  return d;
+}
+function waLink(s, kind){ var ph = waPhone(s); return "https://wa.me/" + ph + "?text=" + encodeURIComponent(message(s, kind)); }
 
 /* ---------- navegación ---------- */
 var ICONS = {
@@ -410,22 +439,43 @@ function topbar(){
     + '<button class="ghost" data-act="reset">Reiniciar ejemplo</button></div>';
 }
 
+var RSVP = { yes:{ label:"Sí", long:"Dijo que sí", tone:"ok" }, no:{ label:"No", long:"Dijo que no", tone:"bad" }, maybe:{ label:"Quizá", long:"Dijo quizá", tone:"warn" }, none:{ label:"Sin responder", long:"Sin responder", tone:"idle" } };
+function rsvpMap(){ return db.rsvp[nextTue] || (db.rsvp[nextTue] = {}); }
+function rsvpOf(id){ return rsvpMap()[id] || "none"; }
+function ago(t){ var m = Math.round((Date.now() - (t || Date.now())) / 60000); return m < 1 ? "hace un momento" : "hace " + plural(m, "minuto", "minutos"); }
+
 function viewHoy(){
   var inst = classInstant(nextTue);
   var roster = db.students.filter(function(s){ var k = status(s).key; return k === "active" || k === "renew"; });
   var att = db.attendance[nextTue] || (db.attendance[nextTue] = { saved:false, marks:{} });
-  roster.forEach(function(s){ if (!att.marks[s.id]) att.marks[s.id] = "asistio"; });
+  att.manual = att.manual || {};
+  if (!att.saved) roster.forEach(function(s){ if (!att.manual[s.id]) att.marks[s.id] = rsvpOf(s.id) === "no" ? "cancelo" : "asistio"; });
+  var groups = { yes:[], no:[], maybe:[], none:[] };
+  roster.forEach(function(s){ groups[rsvpOf(s.id)].push(s); });
   var isToday = nextTue === iso(today);
   var html = '<div class="view-title"><div><div class="eyebrow">' + (isToday ? "Hoy" : "Próxima clase") + '</div><h1>Clase del martes</h1></div></div>';
   html += '<section class="class-card" aria-label="Próxima clase">'
     + '<div class="when">' + esc(longDate(nextTue)) + '</div>'
     + '<div class="times"><div class="time"><small>España</small><strong>' + clock(inst,"Europe/Madrid") + '</strong></div>'
     + '<div class="time"><small>Argentina</small><strong>' + clock(inst,"America/Argentina/Buenos_Aires") + '</strong></div>'
-    + '<div class="time"><small>Plazas</small><strong>' + roster.length + ' / ' + CAP + '</strong></div></div>'
+    + '<div class="time"><small>Dijeron sí</small><strong>' + groups.yes.length + ' de ' + roster.length + '</strong></div></div>'
     + '<div class="class-actions"><button class="on-accent" data-act="copy-reminder">Copiar recordatorio</button>'
     + '<button class="on-accent outline" data-act="copy-meet">Copiar link de Meet</button></div></section>';
 
   html += '<div class="stack" style="margin-top:16px">';
+  if (roster.length){
+    html += '<section class="panel stack" aria-label="Respuestas a la invitación">'
+      + '<div class="row"><h2 style="font-size:1.1rem">Respuestas a la invitación</h2><span class="spacer"></span><span class="sync">Google Calendar · ' + ago(db.rsvpUpdated) + '</span></div>'
+      + '<div class="rsvp-counts">' + ["yes","no","maybe","none"].map(function(k){
+          return '<div class="rc ' + RSVP[k].tone + '"><strong>' + groups[k].length + '</strong><small>' + RSVP[k].label + '</small></div>'; }).join("") + '</div>'
+      + ["yes","no","maybe","none"].filter(function(k){ return groups[k].length; }).map(function(k){
+          return '<div class="rg"><div><span class="pill ' + RSVP[k].tone + '">' + RSVP[k].label + ' · ' + groups[k].length + '</span></div><div class="names">'
+            + groups[k].map(function(st){ return '<span class="name-chip' + (ui.justChanged === st.id ? " just" : "") + '"><span class="mini">' + esc(initials(st.name)) + '</span>' + esc(st.name) + ' ' + flag(st.cc) + '</span>'; }).join("")
+            + '</div></div>'; }).join("")
+      + (groups.none.length ? '<div><button class="btn secondary sm" data-act="copy-nudge">Copiar mensaje para quien no respondió</button></div>' : "")
+      + '<div class="row" style="border-top:1px dashed var(--line);padding-top:10px"><span class="hint">Solo en el prototipo:</span><button class="link-btn" data-act="sim-rsvp">Simular que alguien cambia su respuesta</button></div>'
+      + '</section>';
+  }
   if (att.saved){
     var c = { asistio:0, falto:0, cancelo:0 };
     Object.keys(att.marks).forEach(function(k){ c[att.marks[k]]++; });
@@ -434,23 +484,24 @@ function viewHoy(){
       + '<div><button class="link-btn" data-act="undo-att">Corregir asistencia</button></div></div></div>';
   } else {
     if (!roster.length) html += '<div class="panel empty">Nadie tiene un pack activo todavía. Registra un pago y la persona aparece aquí.</div>';
-    else html += '<div class="panel"><div class="row" style="margin-bottom:4px"><h2 style="font-size:1.1rem">Pasar lista</h2><span class="spacer"></span><span class="hint">Todo el grupo empieza como presente</span></div>'
+    else html += '<div class="panel"><div class="row" style="margin-bottom:4px"><h2 style="font-size:1.1rem">Pasar lista</h2><span class="spacer"></span><span class="hint">Empieza según lo que respondieron</span></div>'
       + '<div class="roster">' + roster.map(function(s){
-        var m = att.marks[s.id];
+        var m = att.marks[s.id], r = rsvpOf(s.id);
         return '<div class="r-item"><div class="avatar">' + esc(initials(s.name)) + '</div>'
-          + '<div class="r-name"><b>' + esc(s.name) + ' ' + flag(s.cc) + '</b><span>Le quedan ' + s.credits + ' de ' + PACK.classes + '</span></div>'
+          + '<div class="r-name"><b>' + esc(s.name) + ' ' + flag(s.cc) + '</b><span><span class="rsvp-tag ' + r + '">' + RSVP[r].long + '</span> · le quedan ' + s.credits + ' de ' + PACK.classes + '</span></div>'
           + '<div class="seg" role="group" aria-label="Asistencia de ' + esc(s.name) + '">'
           + ["asistio","falto","cancelo"].map(function(v){
               var lab = { asistio:"Presente", falto:"Faltó", cancelo:"Avisó" }[v];
               return '<button data-act="mark" data-id="' + s.id + '" data-v="' + v + '" aria-pressed="' + (m === v) + '">' + lab + '</button>';
             }).join("") + '</div></div>';
       }).join("") + '</div>'
-      + '<p class="hint" style="margin:10px 0 12px">“Presente” y “Faltó” descuentan una clase del pack. “Avisó” no descuenta.</p>'
+      + '<p class="hint" style="margin:10px 0 12px">Quien respondió “No” aparece como “Avisó” y no se le descuenta la clase. “Presente” y “Faltó” descuentan una clase del pack.</p>'
       + '<button class="btn block" data-act="save-att">Guardar asistencia</button></div>';
   }
   var n = allAlerts().length;
   if (n) html += '<button class="panel row" data-nav="alertas" style="text-align:left;cursor:pointer;width:100%"><span class="pill warn">' + plural(n,"aviso","avisos") + '</span><span>Packs por renovar y personas para contactar</span><span class="spacer"></span><span aria-hidden="true">→</span></button>';
   html += '</div>';
+  ui.justChanged = null;
   return html;
 }
 
@@ -650,7 +701,19 @@ document.addEventListener("click", function(e){
   var act = b.getAttribute("data-act"), id = +b.getAttribute("data-id");
   var att = db.attendance[nextTue];
   switch (act){
-    case "mark": att.marks[id] = b.getAttribute("data-v"); render(); break;
+    case "mark": att.marks[id] = b.getAttribute("data-v"); att.manual = att.manual || {}; att.manual[id] = true; render(); break;
+    case "sim-rsvp":
+      var pool = db.students.filter(function(x){ var k = status(x).key; return k === "active" || k === "renew"; });
+      if (!pool.length) break;
+      var who = pool[Math.floor(Math.random() * pool.length)];
+      var opts = ["yes","no","maybe"].filter(function(k){ return k !== rsvpOf(who.id); });
+      var nv = opts[Math.floor(Math.random() * opts.length)];
+      rsvpMap()[who.id] = nv; db.rsvpUpdated = Date.now(); ui.justChanged = who.id; persist(); render();
+      toast(first(who.name) + " cambió su respuesta a: " + RSVP[nv].label);
+      break;
+    case "copy-nudge":
+      copy("¡Hola! Para la clase del " + longDate(nextTue) + " falta tu respuesta en la invitación del calendario: Sí, No o Quizá. Así sé cuántas personas vamos a ser. ¡Gracias!", "Mensaje copiado");
+      break;
     case "save-att":
       Object.keys(att.marks).forEach(function(k){
         var s = student(+k), v = att.marks[k]; if (!s) return;
